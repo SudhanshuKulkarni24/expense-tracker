@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+build/
+dist/
+web-build/
+.expo/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment — NEVER commit these
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+*.log
+
+# Firebase
+.firebase/
+firebase/functions/node_modules/
+
+# Google credentials — NEVER commit these
+GoogleService-Info.plist
+google-services.json
+service-account-key.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Expo
+*.orig.*
