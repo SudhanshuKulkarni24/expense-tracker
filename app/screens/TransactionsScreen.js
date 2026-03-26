@@ -2,11 +2,12 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, FlatList, StyleSheet, SafeAreaView,
-  TouchableOpacity, TextInput, Alert,
+  TouchableOpacity, TextInput,
 } from 'react-native';
 import { useTransactionStore, useAuthStore } from '../store';
 import { THEME, formatCurrency, formatShortDate, getCategoryMeta, COLORS } from '../utils/constants';
 import AddTransactionModal from '../components/AddTransactionModal';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const T = THEME.dark;
 
@@ -17,6 +18,7 @@ export default function TransactionsScreen() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [editTransaction, setEditTransaction] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
@@ -39,18 +41,15 @@ export default function TransactionsScreen() {
     setEditTransaction(null);
   };
 
-  const handleDelete = (txn) => {
-    Alert.alert(
-      'Delete transaction',
-      `Are you sure you want to delete "${txn.description}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete', style: 'destructive',
-          onPress: () => deleteTransaction(user.uid, txn.id),
-        },
-      ]
-    );
+  const handleDeleteConfirm = async () => {
+    if (deleteTarget) {
+      try {
+        await deleteTransaction(user.uid, deleteTarget.id);
+      } catch (err) {
+        alert('Error: ' + (err.message || 'Failed to delete transaction.'));
+      }
+    }
+    setDeleteTarget(null);
   };
 
   return (
@@ -97,7 +96,7 @@ export default function TransactionsScreen() {
             <TouchableOpacity
               style={styles.row}
               onPress={() => handleEdit(item)}
-              onLongPress={() => handleDelete(item)}
+              onLongPress={() => setDeleteTarget(item)}
               activeOpacity={0.7}
             >
               <View style={[styles.icon, {
@@ -124,6 +123,17 @@ export default function TransactionsScreen() {
         initialType={editTransaction?.type || 'expense'}
         editTransaction={editTransaction}
         onClose={closeModal}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={!!deleteTarget}
+        title="Delete transaction"
+        message={`Are you sure you want to delete "${deleteTarget?.description}"?`}
+        confirmText="Delete"
+        confirmStyle="destructive"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
       />
     </SafeAreaView>
   );

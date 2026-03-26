@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  Alert, ActivityIndicator, Linking,
+  ActivityIndicator, Linking, ScrollView,
 } from 'react-native';
 import { useAuthStore, useTransactionStore } from '../store';
 import { signOut } from '../services/authService';
@@ -10,6 +10,7 @@ import { createUserSheet, bulkSyncTransactions, getSheetUrl } from '../services/
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { THEME, formatCurrency } from '../utils/constants';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const T = THEME.dark;
 
@@ -18,8 +19,12 @@ export default function ProfileScreen() {
   const { transactions, getTotals, lastSynced, clear } = useTransactionStore();
   const [creatingSheet, setCreatingSheet] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [showSheetCreatedDialog, setShowSheetCreatedDialog] = useState(false);
+  const [createdSheetUrl, setCreatedSheetUrl] = useState('');
 
   const totals = getTotals();
+  const sheetName = `Expense Tracker — ${user?.displayName || 'User'}`;
 
   const handleCreateSheet = async () => {
     setCreatingSheet(true);
@@ -27,17 +32,10 @@ export default function ProfileScreen() {
       const result = await createUserSheet(user.displayName);
       setSpreadsheetId(result.spreadsheetId);
       await setDoc(doc(db, 'users', user.uid), { spreadsheetId: result.spreadsheetId }, { merge: true });
-      const sheetName = `Expense Tracker — ${user.displayName}`;
-      Alert.alert(
-        'Sheet Created!',
-        `Your Google Sheet "${sheetName}" has been created and saved to your Google Drive.\n\nIt will sync automatically whenever you add transactions.`,
-        [
-          { text: 'Open Sheet', onPress: () => Linking.openURL(result.url) },
-          { text: 'OK' },
-        ]
-      );
+      setCreatedSheetUrl(result.url);
+      setShowSheetCreatedDialog(true);
     } catch (err) {
-      Alert.alert('Error', err.message);
+      alert('Error: ' + err.message);
     } finally {
       setCreatingSheet(false);
     }
@@ -45,109 +43,130 @@ export default function ProfileScreen() {
 
   const handleBulkSync = async () => {
     if (!spreadsheetId) {
-      Alert.alert('No sheet linked', 'Please create a Google Sheet first.');
+      alert('No sheet linked. Please create a Google Sheet first.');
       return;
     }
     setSyncing(true);
     try {
       const result = await bulkSyncTransactions(transactions);
-      Alert.alert('Sync complete', `${result.count} transactions synced to Google Sheets.`);
+      alert(`Sync complete! ${result.count} transactions synced to Google Sheets.`);
     } catch (err) {
-      Alert.alert('Sync failed', err.message);
+      alert('Sync failed: ' + err.message);
     } finally {
       setSyncing(false);
     }
   };
 
   const handleSignOut = async () => {
+    setShowSignOutDialog(false);
     try {
       await signOut();
       clearUser();
       clear();
     } catch (error) {
       console.error('Sign out failed:', error);
-      Alert.alert('Error', 'Failed to sign out. Please try again.');
+      alert('Failed to sign out. Please try again.');
     }
-  };
-
-  const handleSignOutPress = () => {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: handleSignOut },
-    ]);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
+      <ScrollView>
+        <Text style={styles.title}>Profile</Text>
 
-      {/* User card */}
-      <View style={styles.userCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.displayName?.[0]?.toUpperCase() || 'U'}</Text>
+        {/* User card */}
+        <View style={styles.userCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{user?.displayName?.[0]?.toUpperCase() || 'U'}</Text>
+          </View>
+          <View>
+            <Text style={styles.name}>{user?.displayName}</Text>
+            <Text style={styles.email}>{user?.email}</Text>
+          </View>
         </View>
-        <View>
-          <Text style={styles.name}>{user?.displayName}</Text>
-          <Text style={styles.email}>{user?.email}</Text>
-        </View>
-      </View>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.statBox}>
-          <Text style={styles.statNum}>{transactions.length}</Text>
-          <Text style={styles.statLabel}>Transactions</Text>
+        {/* Stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statNum}>{transactions.length}</Text>
+            <Text style={styles.statLabel}>Transactions</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={[styles.statNum, { color: T.green }]}>{formatCurrency(totals.income)}</Text>
+            <Text style={styles.statLabel}>Total income</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={[styles.statNum, { color: T.red }]}>{formatCurrency(totals.expense)}</Text>
+            <Text style={styles.statLabel}>Total spent</Text>
+          </View>
         </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statNum, { color: T.green }]}>{formatCurrency(totals.income)}</Text>
-          <Text style={styles.statLabel}>Total income</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statNum, { color: T.red }]}>{formatCurrency(totals.expense)}</Text>
-          <Text style={styles.statLabel}>Total spent</Text>
-        </View>
-      </View>
 
-      {/* Google Sheets section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Google Sheets</Text>
-        {spreadsheetId ? (
-          <>
-            <View style={styles.sheetRow}>
-              <Text style={styles.sheetLinked}>✓ Sheet linked</Text>
-              <TouchableOpacity onPress={() => Linking.openURL(getSheetUrl(spreadsheetId))}>
-                <Text style={styles.openLink}>Open →</Text>
+        {/* Google Sheets section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Google Sheets</Text>
+          {spreadsheetId ? (
+            <>
+              <View style={styles.sheetRow}>
+                <Text style={styles.sheetLinked}>✓ Sheet linked</Text>
+                <TouchableOpacity onPress={() => Linking.openURL(getSheetUrl(spreadsheetId))}>
+                  <Text style={styles.openLink}>Open →</Text>
+                </TouchableOpacity>
+              </View>
+              {lastSynced && (
+                <Text style={styles.lastSync}>
+                  Last synced: {lastSynced.toLocaleTimeString('en-IN')}
+                </Text>
+              )}
+              <TouchableOpacity style={styles.btn} onPress={handleBulkSync} disabled={syncing}>
+                {syncing ? <ActivityIndicator color={T.blue} /> : (
+                  <Text style={styles.btnText}>Force sync all transactions</Text>
+                )}
               </TouchableOpacity>
-            </View>
-            {lastSynced && (
-              <Text style={styles.lastSync}>
-                Last synced: {lastSynced.toLocaleTimeString('en-IN')}
+            </>
+          ) : (
+            <>
+              <Text style={styles.sheetDesc}>
+                Create a Google Sheet to automatically back up all your transactions.
               </Text>
-            )}
-            <TouchableOpacity style={styles.btn} onPress={handleBulkSync} disabled={syncing}>
-              {syncing ? <ActivityIndicator color={T.blue} /> : (
-                <Text style={styles.btnText}>Force sync all transactions</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={styles.sheetDesc}>
-              Create a Google Sheet to automatically back up all your transactions.
-            </Text>
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateSheet} disabled={creatingSheet}>
-              {creatingSheet ? <ActivityIndicator color="#fff" /> : (
-                <Text style={styles.primaryBtnText}>Create my Google Sheet</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
+              <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateSheet} disabled={creatingSheet}>
+                {creatingSheet ? <ActivityIndicator color="#fff" /> : (
+                  <Text style={styles.primaryBtnText}>Create my Google Sheet</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
 
-      {/* Sign out */}
-      <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOutPress}>
-        <Text style={styles.signOutText}>Sign out</Text>
-      </TouchableOpacity>
+        {/* Sign out */}
+        <TouchableOpacity style={styles.signOutBtn} onPress={() => setShowSignOutDialog(true)}>
+          <Text style={styles.signOutText}>Sign out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Sign Out Confirmation Dialog */}
+      <ConfirmDialog
+        visible={showSignOutDialog}
+        title="Sign out"
+        message="Are you sure you want to sign out?"
+        confirmText="Sign out"
+        confirmStyle="destructive"
+        onConfirm={handleSignOut}
+        onCancel={() => setShowSignOutDialog(false)}
+      />
+
+      {/* Sheet Created Success Dialog */}
+      <ConfirmDialog
+        visible={showSheetCreatedDialog}
+        title="Sheet Created!"
+        message={`Your Google Sheet "${sheetName}" has been created and saved to your Google Drive.\n\nIt will sync automatically whenever you add transactions.`}
+        confirmText="Open Sheet"
+        cancelText="OK"
+        onConfirm={() => {
+          setShowSheetCreatedDialog(false);
+          Linking.openURL(createdSheetUrl);
+        }}
+        onCancel={() => setShowSheetCreatedDialog(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -203,7 +222,7 @@ const styles = StyleSheet.create({
   signOutBtn: {
     marginHorizontal: 16, paddingVertical: 14, borderRadius: 12,
     backgroundColor: '#ff5f6d15', borderWidth: 1, borderColor: '#ff5f6d40',
-    alignItems: 'center',
+    alignItems: 'center', marginBottom: 40,
   },
   signOutText: { fontSize: 15, color: T.red, fontWeight: '600' },
 });

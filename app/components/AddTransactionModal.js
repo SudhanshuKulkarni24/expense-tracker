@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, StyleSheet,
-  TextInput, Alert, ActivityIndicator,
+  TextInput, ActivityIndicator,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useTransactionStore, useAuthStore } from '../store';
 import { THEME, CATEGORIES, COLORS } from '../utils/constants';
+import ConfirmDialog from './ConfirmDialog';
 
 const T = THEME.dark;
 
@@ -24,6 +25,7 @@ export default function AddTransactionModal({
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const isEditing = !!editTransaction;
 
@@ -54,19 +56,20 @@ export default function AddTransactionModal({
     setDescription('');
     setCategory('');
     setType(initialType);
+    setShowDeleteDialog(false);
   };
 
   const handleSubmit = async () => {
     if (!amount || isNaN(parseFloat(amount))) {
-      Alert.alert('Invalid amount', 'Please enter a valid number.');
+      alert('Invalid amount. Please enter a valid number.');
       return;
     }
     if (!description.trim()) {
-      Alert.alert('Description required', 'Please add a short description.');
+      alert('Description required. Please add a short description.');
       return;
     }
     if (!category) {
-      Alert.alert('Category required', 'Please select a category.');
+      alert('Category required. Please select a category.');
       return;
     }
 
@@ -91,36 +94,24 @@ export default function AddTransactionModal({
       resetForm();
       onClose();
     } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to save transaction.');
+      alert('Error: ' + (err.message || 'Failed to save transaction.'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Transaction',
-      'Are you sure you want to delete this transaction? This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              await deleteTransaction(user.uid, editTransaction.id);
-              resetForm();
-              onClose();
-            } catch (err) {
-              Alert.alert('Error', err.message || 'Failed to delete transaction.');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+  const handleDeleteConfirm = async () => {
+    setShowDeleteDialog(false);
+    setLoading(true);
+    try {
+      await deleteTransaction(user.uid, editTransaction.id);
+      resetForm();
+      onClose();
+    } catch (err) {
+      alert('Error: ' + (err.message || 'Failed to delete transaction.'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const typeColor = type === 'income' ? T.green : type === 'loan' ? T.amber : T.red;
@@ -221,7 +212,7 @@ export default function AddTransactionModal({
               {isEditing && (
                 <TouchableOpacity
                   style={styles.deleteBtn}
-                  onPress={handleDelete}
+                  onPress={() => setShowDeleteDialog(true)}
                   disabled={loading}
                 >
                   <Text style={styles.deleteBtnText}>Delete</Text>
@@ -249,6 +240,17 @@ export default function AddTransactionModal({
           </View>
         </KeyboardAvoidingView>
       </View>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        title="Delete Transaction"
+        message="Are you sure you want to delete this transaction? This cannot be undone."
+        confirmText="Delete"
+        confirmStyle="destructive"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </Modal>
   );
 }
