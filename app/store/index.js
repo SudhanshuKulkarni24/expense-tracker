@@ -76,6 +76,22 @@ export const useTransactionStore = create((set, get) => ({
     }
   },
 
+  // Update a transaction
+  updateTransaction: async (uid, txnId, updates) => {
+    set({ syncing: true });
+    try {
+      const docRef = doc(db, 'users', uid, 'transactions', txnId);
+      await updateDoc(docRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      });
+      set({ lastSynced: new Date(), syncing: false });
+    } catch (err) {
+      set({ syncing: false });
+      throw err;
+    }
+  },
+
   // Computed: totals
   getTotals: () => {
     const { transactions } = get();

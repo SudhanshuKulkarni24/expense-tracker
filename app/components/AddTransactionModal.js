@@ -1,18 +1,23 @@
 // app/components/AddTransactionModal.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, StyleSheet,
-  TextInput, ScrollView, Alert, ActivityIndicator,
+  TextInput, Alert, ActivityIndicator,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useTransactionStore, useAuthStore } from '../store';
-import { THEME, CATEGORIES, COLORS, formatCurrency } from '../utils/constants';
+import { THEME, CATEGORIES, COLORS } from '../utils/constants';
 
 const T = THEME.dark;
 
-export default function AddTransactionModal({ visible, initialType = 'expense', onClose }) {
+export default function AddTransactionModal({
+  visible,
+  initialType = 'expense',
+  editTransaction = null,
+  onClose,
+}) {
   const { user } = useAuthStore();
-  const { addTransaction, syncing } = useTransactionStore();
+  const { addTransaction, updateTransaction, deleteTransaction } = useTransactionStore();
 
   const [type, setType] = useState(initialType);
   const [amount, setAmount] = useState('');
@@ -20,11 +25,35 @@ export default function AddTransactionModal({ visible, initialType = 'expense', 
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const isEditing = !!editTransaction;
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (editTransaction) {
+      setType(editTransaction.type || 'expense');
+      setAmount(String(editTransaction.amount || ''));
+      setDescription(editTransaction.description || '');
+      setCategory(editTransaction.category || '');
+    } else {
+      setType(initialType);
+      setAmount('');
+      setDescription('');
+      setCategory('');
+    }
+  }, [editTransaction, initialType, visible]);
+
   const categories = CATEGORIES[type] || [];
 
   const handleTypeChange = (t) => {
     setType(t);
     setCategory('');
+  };
+
+  const resetForm = () => {
+    setAmount('');
+    setDescription('');
+    setCategory('');
+    setType(initialType);
   };
 
   const handleSubmit = async () => {
@@ -43,23 +72,55 @@ export default function AddTransactionModal({ visible, initialType = 'expense', 
 
     setLoading(true);
     try {
-      await addTransaction(user.uid, {
+      const txnData = {
         type,
         amount: parseFloat(amount),
         description: description.trim(),
         category,
-        date: new Date().toISOString(),
-      });
-      // Reset form
-      setAmount('');
-      setDescription('');
-      setCategory('');
+      };
+
+      if (isEditing) {
+        await updateTransaction(user.uid, editTransaction.id, txnData);
+      } else {
+        await addTransaction(user.uid, {
+          ...txnData,
+          date: new Date().toISOString(),
+        });
+      }
+
+      resetForm();
       onClose();
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save transaction.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Transaction',
+      'Are you sure you want to delete this transaction? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await deleteTransaction(user.uid, editTransaction.id);
+              resetForm();
+              onClose();
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to delete transaction.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const typeColor = type === 'income' ? T.green : type === 'loan' ? T.amber : T.red;
@@ -76,7 +137,9 @@ export default function AddTransactionModal({ visible, initialType = 'expense', 
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.sheet}>
             <View style={styles.handle} />
-            <Text style={styles.title}>Add transaction</Text>
+            <Text style={styles.title}>
+              {isEditing ? 'Edit transaction' : 'Add transaction'}
+            </Text>
 
             {/* Type selector */}
             <View style={styles.typeRow}>
@@ -111,7 +174,7 @@ export default function AddTransactionModal({ visible, initialType = 'expense', 
                   keyboardType="decimal-pad"
                   placeholder="0"
                   placeholderTextColor={T.text3}
-                  autoFocus
+                  autoFocus={!isEditing}
                 />
               </View>
             </View>
@@ -153,20 +216,36 @@ export default function AddTransactionModal({ visible, initialType = 'expense', 
               </View>
             </View>
 
-            {/* Submit */}
-            <TouchableOpacity
-              style={[styles.submitBtn, { backgroundColor: typeColor }, loading && styles.submitBtnDisabled]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.submitText}>
-                  Add {type} ✓
-                </Text>
+            {/* Buttons */}
+            <View style={styles.buttonRow}>
+              {isEditing && (
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={handleDelete}
+                  disabled={loading}
+                >
+                  <Text style={styles.deleteBtnText}>Delete</Text>
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  { backgroundColor: typeColor },
+                  loading && styles.submitBtnDisabled,
+                  isEditing && { flex: 1 },
+                ]}
+                onPress={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.submitText}>
+                    {isEditing ? 'Save changes' : `Add ${type}`} ✓
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -217,9 +296,17 @@ const styles = StyleSheet.create({
   catIcon: { fontSize: 14 },
   catLabel: { fontSize: 12, color: T.text2, fontWeight: '400' },
 
+  buttonRow: {
+    flexDirection: 'row', gap: 10, marginTop: 4,
+  },
+  deleteBtn: {
+    borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20,
+    backgroundColor: '#ff5f6d15', borderWidth: 1, borderColor: '#ff5f6d40',
+    alignItems: 'center',
+  },
+  deleteBtnText: { fontSize: 16, fontWeight: '600', color: T.red },
   submitBtn: {
-    borderRadius: 14, paddingVertical: 16, alignItems: 'center',
-    marginTop: 4,
+    flex: 1, borderRadius: 14, paddingVertical: 16, alignItems: 'center',
   },
   submitBtnDisabled: { opacity: 0.6 },
   submitText: { fontSize: 16, fontWeight: '700', color: '#fff' },

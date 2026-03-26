@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useTransactionStore, useAuthStore } from '../store';
 import { THEME, formatCurrency, formatShortDate, getCategoryMeta, COLORS } from '../utils/constants';
+import AddTransactionModal from '../components/AddTransactionModal';
 
 const T = THEME.dark;
 
@@ -14,6 +15,8 @@ export default function TransactionsScreen() {
   const { transactions, deleteTransaction } = useTransactionStore();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [editTransaction, setEditTransaction] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
@@ -25,6 +28,16 @@ export default function TransactionsScreen() {
       return matchType && matchSearch;
     });
   }, [transactions, typeFilter, search]);
+
+  const handleEdit = (txn) => {
+    setEditTransaction(txn);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setEditTransaction(null);
+  };
 
   const handleDelete = (txn) => {
     Alert.alert(
@@ -83,7 +96,9 @@ export default function TransactionsScreen() {
           return (
             <TouchableOpacity
               style={styles.row}
+              onPress={() => handleEdit(item)}
               onLongPress={() => handleDelete(item)}
+              activeOpacity={0.7}
             >
               <View style={[styles.icon, {
                 backgroundColor: isCredit ? COLORS.incomeLight : isLoan ? COLORS.loanLight : COLORS.expenseLight,
@@ -102,6 +117,13 @@ export default function TransactionsScreen() {
             </TouchableOpacity>
           );
         }}
+      />
+
+      <AddTransactionModal
+        visible={modalVisible}
+        initialType={editTransaction?.type || 'expense'}
+        editTransaction={editTransaction}
+        onClose={closeModal}
       />
     </SafeAreaView>
   );

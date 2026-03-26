@@ -19,6 +19,7 @@ export default function HomeScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('All');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState('expense');
+  const [editTransaction, setEditTransaction] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const totals = getTotals();
@@ -32,7 +33,22 @@ export default function HomeScreen({ navigation }) {
     ? transactions
     : transactions.filter((t) => t.type === activeTab.toLowerCase());
 
-  const openModal = (type) => { setModalType(type); setModalVisible(true); };
+  const openModal = (type) => {
+    setEditTransaction(null);
+    setModalType(type);
+    setModalVisible(true);
+  };
+
+  const openEditModal = (txn) => {
+    setEditTransaction(txn);
+    setModalType(txn.type);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+    setEditTransaction(null);
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -154,7 +170,9 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.emptySubtext}>Tap + to add your first entry.</Text>
             </View>
           ) : (
-            filtered.slice(0, 10).map((txn) => <TransactionRow key={txn.id} txn={txn} />)
+            filtered.slice(0, 10).map((txn) => (
+              <TransactionRow key={txn.id} txn={txn} onPress={() => openEditModal(txn)} />
+            ))
           )}
         </View>
       </ScrollView>
@@ -167,19 +185,20 @@ export default function HomeScreen({ navigation }) {
       <AddTransactionModal
         visible={modalVisible}
         initialType={modalType}
-        onClose={() => setModalVisible(false)}
+        editTransaction={editTransaction}
+        onClose={closeModal}
       />
     </SafeAreaView>
   );
 }
 
-function TransactionRow({ txn }) {
+function TransactionRow({ txn, onPress }) {
   const meta = getCategoryMeta(txn.category);
   const isCredit = txn.type === 'income';
   const isLoan = txn.type === 'loan';
 
   return (
-    <View style={styles.txnRow}>
+    <TouchableOpacity style={styles.txnRow} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.txnIcon, {
         backgroundColor: isCredit ? COLORS.incomeLight : isLoan ? COLORS.loanLight : COLORS.expenseLight,
       }]}>
@@ -197,7 +216,7 @@ function TransactionRow({ txn }) {
         </Text>
         <Text style={styles.txnDate}>{formatShortDate(txn.date || txn.createdAt)}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

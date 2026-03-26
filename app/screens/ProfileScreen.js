@@ -5,7 +5,7 @@ import {
   Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { useAuthStore, useTransactionStore } from '../store';
-import { useAuth } from '../hooks/useAuth';
+import { signOut } from '../services/authService';
 import { createUserSheet, bulkSyncTransactions, getSheetUrl } from '../services/sheetsService';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -14,9 +14,8 @@ import { THEME, formatCurrency } from '../utils/constants';
 const T = THEME.dark;
 
 export default function ProfileScreen() {
-  const { user, spreadsheetId, setSpreadsheetId } = useAuthStore();
-  const { transactions, getTotals, lastSynced } = useTransactionStore();
-  const { handleSignOut } = useAuth();
+  const { user, spreadsheetId, setSpreadsheetId, signOut: clearUser } = useAuthStore();
+  const { transactions, getTotals, lastSynced, clear } = useTransactionStore();
   const [creatingSheet, setCreatingSheet] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -28,10 +27,15 @@ export default function ProfileScreen() {
       const result = await createUserSheet(user.displayName);
       setSpreadsheetId(result.spreadsheetId);
       await setDoc(doc(db, 'users', user.uid), { spreadsheetId: result.spreadsheetId }, { merge: true });
-      Alert.alert('Sheet created!', 'Your Google Sheet is ready. It will sync automatically.', [
-        { text: 'Open Sheet', onPress: () => Linking.openURL(result.url) },
-        { text: 'OK' },
-      ]);
+      const sheetName = `Expense Tracker — ${user.displayName}`;
+      Alert.alert(
+        'Sheet Created!',
+        `Your Google Sheet "${sheetName}" has been created and saved to your Google Drive.\n\nIt will sync automatically whenever you add transactions.`,
+        [
+          { text: 'Open Sheet', onPress: () => Linking.openURL(result.url) },
+          { text: 'OK' },
+        ]
+      );
     } catch (err) {
       Alert.alert('Error', err.message);
     } finally {
@@ -52,6 +56,17 @@ export default function ProfileScreen() {
       Alert.alert('Sync failed', err.message);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      clearUser();
+      clear();
+    } catch (error) {
+      console.error('Sign out failed:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
     }
   };
 
