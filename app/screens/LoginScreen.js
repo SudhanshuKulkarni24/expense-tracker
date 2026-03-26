@@ -5,14 +5,19 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { signInWithGoogle } from '../services/authService';
+import { useAuthStore } from '../store';
 import { THEME } from '../utils/constants';
 
 const T = THEME.dark;
 
 export default function LoginScreen() {
+  const { setUser, setAccessToken } = useAuthStore();
+
   const handleSignIn = async () => {
     try {
-      await signInWithGoogle();
+      const { user, accessToken } = await signInWithGoogle();
+      setUser(user);
+      setAccessToken(accessToken);
     } catch (error) {
       console.error('Sign in failed:', error);
     }
@@ -107,3 +112,4 @@ const styles = StyleSheet.create({
     marginTop: 20, lineHeight: 18,
   },
 });
+

@@ -6,17 +6,16 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../../firebase/config';
-
-// ─── Google Auth Provider ────────────────────────────────────────────────────
-const googleProvider = new GoogleAuthProvider();
+import { auth, db, googleProvider } from '../../firebase/config';
 
 // ─── Sign in with Google ─────────────────────────────────────────────────────
 export async function signInWithGoogle() {
   try {
     const result = await signInWithPopup(auth, googleProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const accessToken = credential?.accessToken;
     await upsertUserProfile(result.user);
-    return result.user;
+    return { user: result.user, accessToken };
   } catch (error) {
     console.error('Google sign-in error:', error);
     throw error;

@@ -9,12 +9,14 @@ import { db } from '../../firebase/config';
 // ─── Auth Store ─────────────────────────────────────────────────────────────
 export const useAuthStore = create((set) => ({
   user: null,
+  accessToken: null,
   loading: true,
   spreadsheetId: null,
   setUser: (user) => set({ user }),
+  setAccessToken: (token) => set({ accessToken: token }),
   setLoading: (loading) => set({ loading }),
   setSpreadsheetId: (id) => set({ spreadsheetId: id }),
-  signOut: () => set({ user: null, spreadsheetId: null }),
+  signOut: () => set({ user: null, accessToken: null, spreadsheetId: null }),
 }));
 
 // ─── Transaction Store ───────────────────────────────────────────────────────

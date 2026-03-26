@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useAuthStore, useTransactionStore } from '../store';
 import { signOut } from '../services/authService';
-import { createUserSheet, bulkSyncTransactions, getSheetUrl } from '../services/sheetsService';
+import { createUserSheet, bulkSyncTransactions, getSheetUrl, shareSheetWithUser } from '../services/sheetsService';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { THEME, formatCurrency } from '../utils/constants';
@@ -15,7 +15,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 const T = THEME.dark;
 
 export default function ProfileScreen() {
-  const { user, spreadsheetId, setSpreadsheetId, signOut: clearUser } = useAuthStore();
+  const { user, accessToken, spreadsheetId, setSpreadsheetId, signOut: clearUser } = useAuthStore();
   const { transactions, getTotals, lastSynced, clear } = useTransactionStore();
   const [creatingSheet, setCreatingSheet] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -29,7 +29,11 @@ export default function ProfileScreen() {
   const handleCreateSheet = async () => {
     setCreatingSheet(true);
     try {
-      const result = await createUserSheet(user.displayName);
+      const result = await createUserSheet(user.displayName, accessToken);
+      // Share with the user so they can access it
+      if (user.email) {
+        await shareSheetWithUser(result.spreadsheetId, user.email, accessToken);
+      }
       setSpreadsheetId(result.spreadsheetId);
       await setDoc(doc(db, 'users', user.uid), { spreadsheetId: result.spreadsheetId }, { merge: true });
       setCreatedSheetUrl(result.url);
@@ -48,7 +52,7 @@ export default function ProfileScreen() {
     }
     setSyncing(true);
     try {
-      const result = await bulkSyncTransactions(transactions);
+      const result = await bulkSyncTransactions(spreadsheetId, transactions, user.uid, accessToken);
       alert(`Sync complete! ${result.count} transactions synced to Google Sheets.`);
     } catch (err) {
       alert('Sync failed: ' + err.message);
