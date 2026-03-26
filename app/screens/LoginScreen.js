@@ -2,7 +2,7 @@
 import React from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  SafeAreaView,
+  SafeAreaView, Linking,
 } from 'react-native';
 import { signInWithGoogle } from '../services/authService';
 import { useAuthStore } from '../store';
@@ -61,8 +61,17 @@ export default function LoginScreen() {
           </>
         </TouchableOpacity>
 
+        <View style={styles.linksContainer}>
+          <TouchableOpacity onPress={() => Linking.openURL('https://track-your-money24.vercel.app/privacy-policy.html')}>
+            <Text style={styles.link}>Privacy Policy</Text>
+          </TouchableOpacity>
+          <Text style={styles.separator}>·</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('https://track-your-money24.vercel.app/terms-of-service.html')}>
+            <Text style={styles.link}>Terms of Service</Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={styles.terms}>
-          By signing in, you agree to our Terms & Privacy Policy.
           Your data is stored in your own Google Sheet.
         </Text>
       </View>
@@ -106,6 +115,25 @@ const styles = StyleSheet.create({
     textAlign: 'center', lineHeight: 28,
   },
   googleBtnText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+
+  linksContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 15,
+    gap: 8,
+  },
+  link: {
+    fontSize: 13,
+    color: '#2196F3',
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+  },
+  separator: {
+    fontSize: 13,
+    color: T.text3,
+  },
 
   terms: {
     fontSize: 12, color: T.text3, textAlign: 'center',
