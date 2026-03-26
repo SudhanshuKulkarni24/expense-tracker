@@ -1,11 +1,12 @@
 {
-  "buildCommand": "npx expo export --platform web",
+  "buildCommand": "npx expo export --platform web && cp public/landing.html dist/landing.html && cp public/privacy-policy.html dist/privacy-policy.html && cp public/terms-of-service.html dist/terms-of-service.html",
   "outputDirectory": "dist",
   "framework": null,
   "rewrites": [
+    { "source": "/landing", "destination": "/landing.html" },
     { "source": "/", "destination": "/landing.html" },
-    { "source": "/app", "destination": "/index.html" },
     { "source": "/app/(.*)", "destination": "/index.html" },
+    { "source": "/app", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
