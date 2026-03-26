@@ -7,6 +7,7 @@ import {
 import { signInWithGoogle } from '../services/authService';
 import { useAuthStore } from '../store';
 import { THEME } from '../utils/constants';
+import FooterLinks from '../components/FooterLinks';
 
 const T = THEME.dark;
 
@@ -75,6 +76,7 @@ export default function LoginScreen() {
           Your data is stored in your own Google Sheet.
         </Text>
       </View>
+      <FooterLinks />
     </SafeAreaView>
   );
 }
