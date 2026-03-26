@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx expo export --platform web && powershell -Command \"Rename-Item dist/index.html dist/app.html -Force; Copy-Item public/landing.html dist/index.html -Force; Copy-Item public/privacy-policy.html dist/privacy-policy.html -Force; Copy-Item public/terms-of-service.html dist/terms-of-service.html -Force\"",
+  "buildCommand": "bash build.sh",
   "outputDirectory": "dist",
   "framework": null,
   "rewrites": [
@@ -7,5 +7,4 @@
     { "source": "/app", "destination": "/app.html" }
   ]
 }
-
 
