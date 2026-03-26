@@ -2,15 +2,21 @@
 import React from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Image, SafeAreaView,
+  SafeAreaView,
 } from 'react-native';
-import { useAuth } from '../hooks/useAuth';
+import { signInWithGoogle } from '../services/authService';
 import { THEME } from '../utils/constants';
 
 const T = THEME.dark;
 
 export default function LoginScreen() {
-  const { handleSignIn } = useAuth();
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error('Sign in failed:', error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>

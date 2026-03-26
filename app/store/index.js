@@ -1,7 +1,7 @@
 // app/store/index.js
 import { create } from 'zustand';
 import {
-  collection, addDoc, getDocs, deleteDoc,
+  collection, addDoc, getDocs, deleteDoc, updateDoc,
   doc, query, orderBy, onSnapshot, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -48,11 +48,14 @@ export const useTransactionStore = create((set, get) => ({
   addTransaction: async (uid, txn) => {
     set({ syncing: true });
     try {
-      const docRef = await addDoc(collection(db, 'users', uid, 'transactions'), {
+      const colRef = collection(db, 'users', uid, 'transactions');
+      const docRef = await addDoc(colRef, {
         ...txn,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      // Update document with its own ID for Firebase Functions to use
+      await updateDoc(docRef, { id: docRef.id });
       set({ lastSynced: new Date(), syncing: false });
       return docRef.id;
     } catch (err) {

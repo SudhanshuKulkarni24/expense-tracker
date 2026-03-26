@@ -14,7 +14,7 @@ const T = THEME.dark;
 const FILTER_TABS = ['All', 'Income', 'Expense', 'Loan'];
 
 export default function HomeScreen({ navigation }) {
-  const { user, spreadsheetId } = useAuthStore();
+  const { user } = useAuthStore();
   const { transactions, syncing, lastSynced, getTotals } = useTransactionStore();
   const [activeTab, setActiveTab] = useState('All');
   const [modalVisible, setModalVisible] = useState(false);

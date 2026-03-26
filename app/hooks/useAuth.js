@@ -71,8 +71,8 @@ export function useAuth() {
 
   const handleSignOut = async () => {
     await signOut();
-    clearUser();
-    clear();
+    deps.clearUser();
+    deps.clear();
   };
 
   return { handleSignIn, handleSignOut };
