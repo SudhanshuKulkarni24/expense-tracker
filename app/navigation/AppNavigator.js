@@ -77,23 +77,17 @@ function LoadingScreen() {
 
 export default function AppNavigator() {
   const { user, loading } = useAuthStore();
+  
+  console.log('🟡 AppNavigator - user:', user?.uid, 'loading:', loading);
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    console.log('⏳ ShowingLoadingScreen');
+    return <LoadingScreen />;
+  }
 
+  console.log('🎨 Rendering Navigation');
   return (
-    <NavigationContainer
-      theme={{
-        dark: true,
-        colors: {
-          primary: T.blue,
-          background: T.bg,
-          card: T.bg2,
-          text: T.text,
-          border: T.border,
-          notification: T.red,
-        },
-      }}
-    >
+    <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           <Stack.Screen name="Main" component={MainTabs} />

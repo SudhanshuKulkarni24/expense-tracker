@@ -1,35 +1,26 @@
 // app/services/authService.js
 import {
-  signInWithCredential,
+  signInWithPopup,
   signOut as firebaseSignOut,
   GoogleAuthProvider,
   onAuthStateChanged,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebase/config';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import Constants from 'expo-constants';
 
-WebBrowser.maybeCompleteAuthSession();
+// ─── Google Auth Provider ────────────────────────────────────────────────────
+const googleProvider = new GoogleAuthProvider();
 
-// ─── Initialize Google Auth ──────────────────────────────────────────────────
-export function useGoogleAuth() {
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID,
-  });
-
-  return { request, response, promptAsync };
-}
-
-// ─── Sign in with Google credential ─────────────────────────────────────────
-export async function signInWithGoogle(idToken, accessToken) {
-  const credential = GoogleAuthProvider.credential(idToken, accessToken);
-  const result = await signInWithCredential(auth, credential);
-  await upsertUserProfile(result.user);
-  return result.user;
+// ─── Sign in with Google ─────────────────────────────────────────────────────
+export async function signInWithGoogle() {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    await upsertUserProfile(result.user);
+    return result.user;
+  } catch (error) {
+    console.error('Google sign-in error:', error);
+    throw error;
+  }
 }
 
 // ─── Create or update user profile in Firestore ──────────────────────────────

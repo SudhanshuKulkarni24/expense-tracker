@@ -2,7 +2,7 @@
 import React from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Image, ActivityIndicator, SafeAreaView,
+  Image, SafeAreaView,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { THEME } from '../utils/constants';
@@ -10,7 +10,7 @@ import { THEME } from '../utils/constants';
 const T = THEME.dark;
 
 export default function LoginScreen() {
-  const { handleSignIn, request } = useAuth();
+  const { handleSignIn } = useAuth();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -41,18 +41,13 @@ export default function LoginScreen() {
 
         {/* Sign in button */}
         <TouchableOpacity
-          style={[styles.googleBtn, !request && styles.googleBtnDisabled]}
+          style={styles.googleBtn}
           onPress={handleSignIn}
-          disabled={!request}
         >
-          {!request ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Text style={styles.googleIcon}>G</Text>
-              <Text style={styles.googleBtnText}>Continue with Google</Text>
-            </>
-          )}
+          <>
+            <Text style={styles.googleIcon}>G</Text>
+            <Text style={styles.googleBtnText}>Continue with Google</Text>
+          </>
         </TouchableOpacity>
 
         <Text style={styles.terms}>
@@ -93,7 +88,6 @@ const styles = StyleSheet.create({
     width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: T.blue, borderRadius: 14, paddingVertical: 16, gap: 10,
   },
-  googleBtnDisabled: { opacity: 0.5 },
   googleIcon: {
     fontSize: 18, fontWeight: '700', color: '#fff',
     backgroundColor: 'rgba(255,255,255,0.2)',

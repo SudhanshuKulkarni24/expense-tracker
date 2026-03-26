@@ -28,9 +28,6 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "plugins": [
-      "expo-router"
-    ],
     "scheme": "expensetracker",
     "extra": {
       "eas": {
