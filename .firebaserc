@@ -1,6 +1,7 @@
 {
   "projects": {
-    "expense-tracker": "expense-tracker-1ed04"
+    "expense-tracker": "expense-tracker-1ed04",
+    "default": "expense-tracker-1ed04"
   },
   "targets": {},
   "etags": {}
